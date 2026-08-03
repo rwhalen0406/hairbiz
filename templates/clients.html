@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Client lookup — HairBiz Revenue Insights{% endblock %}
+{% block content %}
+
+<section class="card">
+  <h2>Client lookup</h2>
+  <p class="card-subtitle">
+    Search by name to see every Square customer profile that matches and their full
+    resolved visit history -- useful for spotting duplicate customer profiles, which
+    silently split one person's visit history across two "clients" and can make an
+    actively-returning client look overdue.
+  </p>
+  <form method="get" action="{{ url_for('client_lookup') }}" style="display:flex; gap:0.5rem;">
+    <input
+      type="text" name="q" value="{{ query }}" placeholder="e.g. Mary Jo Keller"
+      style="flex:1; padding:0.6rem 0.8rem; border-radius:8px; border:1px solid var(--border); background: var(--surface-raised); color: var(--text-primary); font-size:0.95rem;"
+    >
+    <button type="submit">Search</button>
+  </form>
+</section>
+
+{% if query %}
+  {% if results %}
+    {% if results|length > 1 %}
+      <section class="card">
+        <p class="hint" style="color: var(--status-warning);">
+          &#9888; {{ results|length }} separate Square customer profiles match "{{ query }}".
+          If this is one real person, their visit history is split across profiles below --
+          merge the duplicates in your Square Dashboard (Customers) to fix this at the source.
+        </p>
+      </section>
+    {% endif %}
+    {% for r in results %}
+    <section class="card">
+      <h2>{{ (r.given_name or "") ~ " " ~ (r.family_name or "") }}</h2>
+      <p class="hint">Customer ID: <code>{{ r.customer_id }}</code> &middot; {{ r.visit_count }} visit{{ "s" if r.visit_count != 1 }}</p>
+      {% if r.visits %}
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th class="num">Total</th></tr></thead>
+          <tbody>
+            {% for v in r.visits %}
+            <tr><td>{{ v.date }}</td><td class="num">${{ "%.2f"|format(v.total) }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+        <p class="hint">No completed orders resolved to this profile.</p>
+      {% endif %}
+    </section>
+    {% endfor %}
+  {% else %}
+    <section class="card">
+      <p class="hint">No customer profiles match "{{ query }}".</p>
+    </section>
+  {% endif %}
+{% endif %}
+
+{% endblock %}

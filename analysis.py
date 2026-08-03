@@ -207,15 +207,17 @@ def service_combos(dfs, top_n=15):
     )
 
 
-def client_retention(dfs):
-    sales = _service_sales(dfs)
+def _resolved_orders(dfs):
+    """Completed orders with created_at parsed and customer_id resolved.
+
+    An order isn't always tagged with a customer profile at checkout, even when the
+    payment itself was (e.g. staff picked the customer on the card reader but not in
+    the order). Fall back to the payment's customer_id so a visit isn't silently
+    dropped from retention just because the order-level tag is missing.
+    """
     orders = dfs["orders"].copy()
     orders["created_at"] = pd.to_datetime(orders["created_at"], errors="coerce", utc=True)
 
-    # An order isn't always tagged with a customer profile at checkout, even when the
-    # payment itself was (e.g. staff picked the customer on the card reader but not in
-    # the order). Fall back to the payment's customer_id so a visit isn't silently
-    # dropped from retention just because the order-level tag is missing.
     payments = dfs["payments"]
     if not payments.empty:
         payment_customers = (
@@ -225,11 +227,55 @@ def client_retention(dfs):
         )
         orders["customer_id"] = orders["customer_id"].fillna(orders["id"].map(payment_customers))
 
-    orders = orders[
+    return orders[
         (orders["state"] == "COMPLETED")
         & orders["customer_id"].notna()
         & orders["created_at"].notna()
     ]
+
+
+def client_lookup(dfs, query):
+    """Diagnostic: find every customer profile matching a name search, with their
+    full resolved visit history. Surfaces duplicate Square customer profiles for the
+    same person, which otherwise silently split someone's visit history in half.
+    """
+    customers = dfs["customers"].copy()
+    if customers.empty or not query:
+        return []
+
+    name = (customers["given_name"].fillna("") + " " + customers["family_name"].fillna("")).str.strip()
+    matches = customers[name.str.contains(query, case=False, na=False)]
+    if matches.empty:
+        return []
+
+    orders = _resolved_orders(dfs)
+
+    results = []
+    for _, cust in matches.iterrows():
+        cust_orders = orders[orders["customer_id"] == cust["id"]].sort_values(
+            "created_at", ascending=False
+        )
+        results.append(
+            {
+                "customer_id": cust["id"],
+                "given_name": cust.get("given_name"),
+                "family_name": cust.get("family_name"),
+                "visit_count": len(cust_orders),
+                "visits": [
+                    {
+                        "date": row["created_at"].strftime("%Y-%m-%d"),
+                        "total": round((row["total_money_cents"] or 0) / 100.0, 2),
+                    }
+                    for _, row in cust_orders.iterrows()
+                ],
+            }
+        )
+    return results
+
+
+def client_retention(dfs):
+    sales = _service_sales(dfs)
+    orders = _resolved_orders(dfs)
 
     if orders.empty:
         return {

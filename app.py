@@ -1,7 +1,7 @@
 import os
 
 import pandas as pd
-from flask import Flask, flash, redirect, render_template, url_for
+from flask import Flask, flash, redirect, render_template, request, url_for
 
 import analysis
 import config
@@ -128,6 +128,20 @@ def report():
         max_combo=max_combo,
         excluded_keywords=config.EXCLUDED_ITEM_KEYWORDS,
     )
+
+
+@app.route("/clients")
+def client_lookup():
+    query = request.args.get("q", "").strip()
+    results = []
+    if query:
+        with db.get_connection() as conn:
+            if not db.has_any_data(conn):
+                flash("No data yet. Run a sync first from the home page.", "warning")
+                return redirect(url_for("index"))
+            dfs = analysis.load_dataframes(conn)
+        results = analysis.client_lookup(dfs, query)
+    return render_template("clients.html", query=query, results=results)
 
 
 if __name__ == "__main__":

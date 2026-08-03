@@ -186,7 +186,7 @@
     <tbody>
       {% for c in retention.at_risk_clients %}
       <tr>
-        <td>{{ (c.given_name or "") ~ " " ~ (c.family_name or "") }}</td>
+        <td><a href="{{ url_for('client_lookup', q=((c.given_name or '') ~ ' ' ~ (c.family_name or '')).strip()) }}">{{ (c.given_name or "") ~ " " ~ (c.family_name or "") }}</a></td>
         <td class="num">{{ c.visits }}</td>
         <td class="num">${{ "{:,.0f}".format(c.total_spend) }}</td>
         <td class="num">{{ c.days_since_last_visit }}</td>
