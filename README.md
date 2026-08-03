@@ -91,6 +91,25 @@ By default each sync pulls the last `SYNC_LOOKBACK_DAYS` (730 / ~2 years) of
 orders, payments, and bookings, so trend analysis has enough history.
 Adjust this in `.env`.
 
+## Security posture
+
+- **Read-only against Square**, always (see above).
+- **The app itself has no login.** Anyone who can reach it on the network can
+  view your business/client data and trigger a sync with your stored token.
+  It binds to `127.0.0.1` (your machine only) by default -- don't set
+  `HOST=0.0.0.0` in `.env` unless you specifically intend to expose it
+  beyond your own machine, and put real authentication (e.g. a reverse
+  proxy with login) in front of it if you do.
+- **Flask debug mode stays off** (`FLASK_DEBUG=false` by default). Debug
+  mode's interactive in-browser console is a known remote-code-execution
+  risk on anything but a fully local, trusted machine.
+- Your Square token and `.env` are never committed (`.gitignore`); the local
+  SQLite cache (`data/hairbiz.db`) and session secret
+  (`data/.flask_secret_key`) aren't either.
+- Dependencies are checked with `pip-audit` before release; run
+  `./venv/bin/pip install pip-audit && ./venv/bin/pip-audit -r requirements.txt`
+  periodically to catch newly disclosed CVEs in pinned versions.
+
 ## Tech stack
 
 Python 3 / Flask, `requests` for the Square REST API, `pandas`/`numpy` for

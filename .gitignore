@@ -4,3 +4,4 @@ __pycache__/
 .env
 data/*.db
 data/*.db-journal
+data/.flask_secret_key

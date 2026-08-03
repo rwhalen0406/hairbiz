@@ -244,7 +244,7 @@ def client_lookup(dfs, query):
         return []
 
     name = (customers["given_name"].fillna("") + " " + customers["family_name"].fillna("")).str.strip()
-    matches = customers[name.str.contains(query, case=False, na=False)]
+    matches = customers[name.str.contains(query, case=False, na=False, regex=False)]
     if matches.empty:
         return []
 

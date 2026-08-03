@@ -1,8 +1,13 @@
 import os
+import secrets
 
 from dotenv import load_dotenv
 
 load_dotenv()
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(BASE_DIR, "data")
+DB_PATH = os.path.join(DATA_DIR, "hairbiz.db")
 
 SQUARE_ACCESS_TOKEN = os.environ.get("SQUARE_ACCESS_TOKEN", "")
 SQUARE_ENVIRONMENT = os.environ.get("SQUARE_ENVIRONMENT", "sandbox").strip().lower()
@@ -22,11 +27,26 @@ EXCLUDED_ITEM_KEYWORDS = [
     if k.strip()
 ]
 
-FLASK_SECRET_KEY = os.environ.get("FLASK_SECRET_KEY", "dev-secret-change-me")
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(BASE_DIR, "data")
-DB_PATH = os.path.join(DATA_DIR, "hairbiz.db")
+def _get_or_create_secret_key():
+    """Uses FLASK_SECRET_KEY if set; otherwise generates and persists a random one
+    locally, so sessions survive a restart without ever committing a real secret to
+    the repo (the previous hardcoded fallback was a known, public value)."""
+    env_key = os.environ.get("FLASK_SECRET_KEY", "").strip()
+    if env_key:
+        return env_key
+    os.makedirs(DATA_DIR, exist_ok=True)
+    key_path = os.path.join(DATA_DIR, ".flask_secret_key")
+    if os.path.exists(key_path):
+        with open(key_path) as f:
+            return f.read().strip()
+    key = secrets.token_hex(32)
+    with open(key_path, "w") as f:
+        f.write(key)
+    return key
+
+
+FLASK_SECRET_KEY = _get_or_create_secret_key()
 
 SQUARE_API_BASE = (
     "https://connect.squareupsandbox.com"

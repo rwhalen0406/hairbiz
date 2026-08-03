@@ -146,4 +146,13 @@ def client_lookup():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(debug=True, host="0.0.0.0", port=port)
+    # Loopback-only and debug off by default: this app holds a Square access token
+    # and has no login of its own, so binding to all interfaces (0.0.0.0) or leaving
+    # the Werkzeug debugger on would expose your business/client data -- and, via the
+    # debugger's interactive console, arbitrary code execution -- to anyone on the
+    # same network. Only override HOST if you specifically intend to expose this
+    # beyond your own machine, and add authentication (e.g. a reverse proxy with
+    # login) in front of it first.
+    host = os.environ.get("HOST", "127.0.0.1")
+    debug = os.environ.get("FLASK_DEBUG", "false").strip().lower() in ("1", "true", "yes")
+    app.run(debug=debug, host=host, port=port)
