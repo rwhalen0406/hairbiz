@@ -55,8 +55,10 @@ def sync_now():
         return redirect(url_for("index"))
 
     counts = summary["counts"]
+    window_start = summary.get("window_start", "")[:10]
+    window_end = summary.get("window_end", "")[:10]
     flash(
-        "Sync complete. Pulled: "
+        f"Sync complete (data from {window_start} through {window_end}). Pulled: "
         + ", ".join(f"{v} {k.replace('_', ' ')}" for k, v in counts.items()),
         "success",
     )

@@ -19,9 +19,12 @@ def run_sync():
     whole sync, since not every merchant uses every Square product.
     """
     client = SquareClient()
+    lookback_start = _lookback_start_iso()
     summary = {
         "counts": {},
         "warnings": [],
+        "window_start": lookback_start,
+        "window_end": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
 
     with db.get_connection() as conn:
@@ -49,13 +52,13 @@ def run_sync():
         _sync_catalog(client)
 
         # Orders (revenue by line item)
-        order_count, line_item_count = _sync_orders(client, location_ids)
+        order_count, line_item_count = _sync_orders(client, location_ids, lookback_start)
         summary["counts"]["orders"] = order_count
         summary["counts"]["order_line_items"] = line_item_count
 
         # Payments (transaction history)
         try:
-            payment_count = _sync_payments(client)
+            payment_count = _sync_payments(client, lookback_start)
             summary["counts"]["payments"] = payment_count
         except SquareAPIError as exc:
             summary["warnings"].append(f"Payments: {exc}")
@@ -65,7 +68,7 @@ def run_sync():
         # don't use Square Appointments (set SYNC_BOOKINGS=true in .env to enable).
         if config.SYNC_BOOKINGS:
             try:
-                booking_count = _sync_bookings(client, location_ids)
+                booking_count = _sync_bookings(client, location_ids, lookback_start)
                 summary["counts"]["bookings"] = booking_count
             except SquareAPIError as exc:
                 summary["warnings"].append(
@@ -156,8 +159,7 @@ def _sync_catalog(client):
             )
 
 
-def _sync_orders(client, location_ids):
-    begin_time = _lookback_start_iso()
+def _sync_orders(client, location_ids, begin_time):
     order_count = 0
     line_item_count = 0
     with db.get_connection() as conn:
@@ -191,8 +193,7 @@ def _sync_orders(client, location_ids):
     return order_count, line_item_count
 
 
-def _sync_payments(client):
-    begin_time = _lookback_start_iso()
+def _sync_payments(client, begin_time):
     count = 0
     with db.get_connection() as conn:
         for payment in client.list_payments(begin_time=begin_time):
@@ -213,8 +214,7 @@ def _sync_payments(client):
     return count
 
 
-def _sync_bookings(client, location_ids):
-    start_at_min = _lookback_start_iso()
+def _sync_bookings(client, location_ids, start_at_min):
     count = 0
     with db.get_connection() as conn:
         for location_id in location_ids:
