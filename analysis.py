@@ -92,8 +92,12 @@ def service_metrics(dfs):
         times_sold = len(g)
         avg_ticket = total_revenue / times_sold if times_sold else 0.0
 
-        monthly = g.set_index("created_at").resample("MS")["revenue"].sum()
-        trend = _trend_label(monthly) if not monthly.empty else "insufficient data"
+        g_dated = g.dropna(subset=["created_at"])
+        if g_dated.empty:
+            trend = "insufficient data"
+        else:
+            monthly = g_dated.set_index("created_at").resample("MS")["revenue"].sum()
+            trend = _trend_label(monthly) if not monthly.empty else "insufficient data"
 
         rows.append(
             {
@@ -199,7 +203,11 @@ def client_retention(dfs):
     sales = _service_sales(dfs)
     orders = dfs["orders"].copy()
     orders["created_at"] = pd.to_datetime(orders["created_at"], errors="coerce", utc=True)
-    orders = orders[(orders["state"] == "COMPLETED") & orders["customer_id"].notna()]
+    orders = orders[
+        (orders["state"] == "COMPLETED")
+        & orders["customer_id"].notna()
+        & orders["created_at"].notna()
+    ]
 
     if orders.empty:
         return {
