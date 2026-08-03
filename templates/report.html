@@ -2,9 +2,32 @@
 {% block title %}Report — HairBiz Revenue Insights{% endblock %}
 {% block content %}
 
+<div class="stat-grid">
+  <div class="stat-tile">
+    <div class="stat-label">Total revenue</div>
+    <div class="stat-value">${{ "{:,.0f}".format(summary_stats.total_revenue) }}</div>
+    <div class="stat-sub">lookback window</div>
+  </div>
+  <div class="stat-tile">
+    <div class="stat-label">Services sold</div>
+    <div class="stat-value">{{ "{:,}".format(summary_stats.total_times_sold) }}</div>
+    <div class="stat-sub">{{ summary_stats.service_count }} distinct services</div>
+  </div>
+  <div class="stat-tile">
+    <div class="stat-label">Repeat clients</div>
+    <div class="stat-value">{{ "%.0f"|format(retention.repeat_rate * 100) }}%</div>
+    <div class="stat-sub">{{ retention.repeat_clients }} of {{ retention.total_clients }} clients</div>
+  </div>
+  <div class="stat-tile">
+    <div class="stat-label">Overdue for rebooking</div>
+    <div class="stat-value">{{ retention.at_risk_clients|length }}</div>
+    <div class="stat-sub">repeat clients past due</div>
+  </div>
+</div>
+
 <section class="card">
   <h2>Recommendations</h2>
-  <p class="hint">
+  <p class="card-subtitle">
     Based on revenue and volume from your Square data (proxy for profitability --
     Square's API does not expose cost/margin data).
   </p>
@@ -28,6 +51,25 @@
 </section>
 
 <section class="card">
+  <h2>Revenue by service</h2>
+  {% if top_services_chart %}
+  <div class="bar-chart">
+    {% for m in top_services_chart %}
+    <div class="bar-row">
+      <span class="bar-label" title="{{ m.service_name }}">{{ m.service_name }}</span>
+      <div class="bar-track">
+        <div class="bar-fill" style="width: {{ (m.total_revenue / max_revenue * 100) if max_revenue else 0 }}%;"></div>
+      </div>
+      <span class="bar-value">${{ "{:,.0f}".format(m.total_revenue) }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+    <p class="hint">No revenue data yet.</p>
+  {% endif %}
+</section>
+
+<section class="card">
   <h2>Service performance</h2>
   {% if not has_duration_data %}
     <p class="hint">No appointment duration data found (Square Appointments/Bookings), so
@@ -38,11 +80,11 @@
     <thead>
       <tr>
         <th>Service</th>
-        <th>Total revenue</th>
-        <th>Times sold</th>
-        <th>Avg ticket</th>
+        <th class="num">Total revenue</th>
+        <th class="num">Times sold</th>
+        <th class="num">Avg ticket</th>
         <th>Trend</th>
-        <th>Revenue/min</th>
+        <th class="num">Revenue/min</th>
         <th>Signal</th>
       </tr>
     </thead>
@@ -50,14 +92,19 @@
       {% for m in metrics %}
       <tr>
         <td>{{ m.service_name }}</td>
-        <td>${{ "%.0f"|format(m.total_revenue) }}</td>
-        <td>{{ m.times_sold }}</td>
-        <td>${{ "%.0f"|format(m.avg_ticket) }}</td>
-        <td><span class="badge trend-{{ m.trend|replace(' ', '-') }}">{{ m.trend }}</span></td>
-        <td>{% if m.revenue_per_minute is not none %}${{ "%.2f"|format(m.revenue_per_minute) }}{% else %}&mdash;{% endif %}</td>
+        <td class="num">${{ "{:,.0f}".format(m.total_revenue) }}</td>
+        <td class="num">{{ m.times_sold }}</td>
+        <td class="num">${{ "%.0f"|format(m.avg_ticket) }}</td>
         <td>
-          {% if m.is_top_performer %}<span class="badge ok">top performer</span>{% endif %}
-          {% if m.is_underperformer %}<span class="badge bad">underperformer</span>{% endif %}
+          <span class="badge trend-{{ m.trend|replace(' ', '-') }}">
+            {% if m.trend == 'growing' %}&#8593;{% elif m.trend == 'declining' %}&#8595;{% else %}&#8594;{% endif %}
+            {{ m.trend }}
+          </span>
+        </td>
+        <td class="num">{% if m.revenue_per_minute is not none %}${{ "%.2f"|format(m.revenue_per_minute) }}{% else %}&mdash;{% endif %}</td>
+        <td>
+          {% if m.is_top_performer %}<span class="badge ok">&#10003; top performer</span>{% endif %}
+          {% if m.is_underperformer %}<span class="badge bad">&#9888; underperformer</span>{% endif %}
         </td>
       </tr>
       {% endfor %}
@@ -71,13 +118,20 @@
   {% if combos %}
   <div class="table-wrap">
   <table>
-    <thead><tr><th>Service A</th><th>Service B</th><th>Times together</th></tr></thead>
+    <thead><tr><th>Service A</th><th>Service B</th><th class="num">Times together</th></tr></thead>
     <tbody>
       {% for c in combos %}
       <tr>
         <td>{{ c.service_a }}</td>
         <td>{{ c.service_b }}</td>
-        <td>{{ c.times_together }}</td>
+        <td>
+          <div class="mini-bar-cell">
+            <div class="mini-bar-track">
+              <div class="mini-bar-fill" style="width: {{ (c.times_together / max_combo * 100) if max_combo else 0 }}%;"></div>
+            </div>
+            <span class="num">{{ c.times_together }}</span>
+          </div>
+        </td>
       </tr>
       {% endfor %}
     </tbody>
@@ -91,22 +145,22 @@
 <section class="card">
   <h2>Client retention</h2>
   <ul class="status-list">
-    <li>Total clients (with completed orders): {{ retention.total_clients }}</li>
-    <li>Repeat clients (2+ visits): {{ retention.repeat_clients }} ({{ "%.0f"|format(retention.repeat_rate * 100) }}%)</li>
-    <li>Average visits per client: {{ retention.avg_visits_per_client }}</li>
+    <li><span class="label">Total clients (with completed orders)</span> <span>{{ retention.total_clients }}</span></li>
+    <li><span class="label">Repeat clients (2+ visits)</span> <span>{{ retention.repeat_clients }} ({{ "%.0f"|format(retention.repeat_rate * 100) }}%)</span></li>
+    <li><span class="label">Average visits per client</span> <span>{{ retention.avg_visits_per_client }}</span></li>
   </ul>
 
   <h3>Top clients by spend</h3>
   {% if retention.top_clients %}
   <div class="table-wrap">
   <table>
-    <thead><tr><th>Client</th><th>Visits</th><th>Total spend</th><th>Last visit</th></tr></thead>
+    <thead><tr><th>Client</th><th class="num">Visits</th><th class="num">Total spend</th><th>Last visit</th></tr></thead>
     <tbody>
       {% for c in retention.top_clients %}
       <tr>
         <td>{{ (c.given_name or "") ~ " " ~ (c.family_name or "") }}</td>
-        <td>{{ c.visits }}</td>
-        <td>${{ "%.0f"|format(c.total_spend) }}</td>
+        <td class="num">{{ c.visits }}</td>
+        <td class="num">${{ "{:,.0f}".format(c.total_spend) }}</td>
         <td>{{ c.last_visit }}</td>
       </tr>
       {% endfor %}
@@ -121,14 +175,14 @@
   {% if retention.at_risk_clients %}
   <div class="table-wrap">
   <table>
-    <thead><tr><th>Client</th><th>Visits</th><th>Total spend</th><th>Days since last visit</th></tr></thead>
+    <thead><tr><th>Client</th><th class="num">Visits</th><th class="num">Total spend</th><th class="num">Days since last visit</th></tr></thead>
     <tbody>
       {% for c in retention.at_risk_clients %}
       <tr>
         <td>{{ (c.given_name or "") ~ " " ~ (c.family_name or "") }}</td>
-        <td>{{ c.visits }}</td>
-        <td>${{ "%.0f"|format(c.total_spend) }}</td>
-        <td>{{ c.days_since_last_visit }}</td>
+        <td class="num">{{ c.visits }}</td>
+        <td class="num">${{ "{:,.0f}".format(c.total_spend) }}</td>
+        <td class="num">{{ c.days_since_last_visit }}</td>
       </tr>
       {% endfor %}
     </tbody>

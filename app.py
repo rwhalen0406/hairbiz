@@ -81,30 +81,51 @@ def report():
     recs = recommendations.generate_recommendations(data)
 
     metrics_df = data["service_metrics"]
+    summary_stats = {
+        "total_revenue": float(metrics_df["total_revenue"].sum()) if not metrics_df.empty else 0.0,
+        "total_times_sold": int(metrics_df["times_sold"].sum()) if not metrics_df.empty else 0,
+        "service_count": len(metrics_df),
+    }
+    max_revenue = float(metrics_df["total_revenue"].max()) if not metrics_df.empty else 0.0
+    top_services_chart = metrics_df.head(10).to_dict("records") if not metrics_df.empty else []
+
     metrics_df = metrics_df.astype(object).where(pd.notnull(metrics_df), None)
     data["service_metrics"] = metrics_df
 
+    combos_df = data["service_combos"]
+    max_combo = int(combos_df["times_together"].max()) if not combos_df.empty else 0
+
     retention = data["retention"]
+    top_clients_df = retention.get("top_clients")
+    at_risk_df = retention.get("at_risk_clients")
+    for df in (top_clients_df, at_risk_df):
+        if df is not None and not df.empty and "last_visit" in df.columns:
+            df["last_visit"] = df["last_visit"].dt.strftime("%Y-%m-%d")
+
     retention_view = {
         "total_clients": retention.get("total_clients", 0),
         "repeat_clients": retention.get("repeat_clients", 0),
         "repeat_rate": retention.get("repeat_rate", 0.0),
         "avg_visits_per_client": retention.get("avg_visits_per_client", 0.0),
-        "top_clients": retention["top_clients"].to_dict("records")
-        if retention.get("top_clients") is not None and not retention["top_clients"].empty
+        "top_clients": top_clients_df.to_dict("records")
+        if top_clients_df is not None and not top_clients_df.empty
         else [],
-        "at_risk_clients": retention["at_risk_clients"].to_dict("records")
-        if retention.get("at_risk_clients") is not None and not retention["at_risk_clients"].empty
+        "at_risk_clients": at_risk_df.to_dict("records")
+        if at_risk_df is not None and not at_risk_df.empty
         else [],
     }
 
     return render_template(
         "report.html",
         metrics=data["service_metrics"].to_dict("records"),
-        combos=data["service_combos"].to_dict("records") if not data["service_combos"].empty else [],
+        combos=combos_df.to_dict("records") if not combos_df.empty else [],
         retention=retention_view,
         has_duration_data=data["has_duration_data"],
         recommendations=recs,
+        summary_stats=summary_stats,
+        max_revenue=max_revenue,
+        top_services_chart=top_services_chart,
+        max_combo=max_combo,
     )
 
 

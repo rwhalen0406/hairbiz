@@ -2,15 +2,19 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}HairBiz Revenue Insights{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
   <header>
-    <h1><a href="{{ url_for('index') }}">HairBiz Revenue Insights</a></h1>
+    <a class="brand" href="{{ url_for('index') }}">
+      <span class="brand-mark">H</span>
+      <h1>HairBiz Revenue Insights</h1>
+    </a>
     <nav>
-      <a href="{{ url_for('index') }}">Home</a>
-      <a href="{{ url_for('report') }}">Report</a>
+      <a href="{{ url_for('index') }}" class="{{ 'active' if request.endpoint == 'index' }}">Home</a>
+      <a href="{{ url_for('report') }}" class="{{ 'active' if request.endpoint == 'report' }}">Report</a>
     </nav>
   </header>
 
@@ -19,7 +23,10 @@
       {% if messages %}
         <div class="flash-list">
           {% for category, message in messages %}
-            <div class="flash flash-{{ category }}">{{ message }}</div>
+            <div class="flash flash-{{ category }}">
+              <span>{% if category == 'success' %}&#10003;{% elif category == 'error' %}&#10007;{% else %}&#9888;{% endif %}</span>
+              <span>{{ message }}</span>
+            </div>
           {% endfor %}
         </div>
       {% endif %}

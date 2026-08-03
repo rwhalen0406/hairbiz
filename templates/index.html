@@ -3,32 +3,43 @@
 
 <section class="card">
   <h2>Connection status</h2>
-  <ul class="status-list">
-    <li>
-      Square access token:
-      {% if token_configured %}
-        <span class="ok">configured</span>
-      {% else %}
-        <span class="bad">not set (edit your .env file)</span>
-      {% endif %}
-    </li>
-    <li>Environment: <span class="badge">{{ environment }}</span></li>
-    <li>
-      Last sync:
+  <div class="stat-grid">
+    <div class="stat-tile">
+      <div class="stat-label">Access token</div>
+      <div class="stat-value">
+        {% if token_configured %}
+          <span class="badge ok">&#10003; configured</span>
+        {% else %}
+          <span class="badge bad">&#10007; not set</span>
+        {% endif %}
+      </div>
+      {% if not token_configured %}<div class="stat-sub">Edit your .env file</div>{% endif %}
+    </div>
+    <div class="stat-tile">
+      <div class="stat-label">Environment</div>
+      <div class="stat-value" style="font-size:1.05rem;">
+        <span class="badge {{ 'warn' if environment == 'sandbox' else 'ok' }}">{{ environment }}</span>
+      </div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-label">Last sync</div>
       {% if last_sync %}
-        {{ last_sync.finished_at or "in progress" }} &mdash; status: {{ last_sync.status }}
+        <div class="stat-value" style="font-size:1.05rem;">
+          <span class="badge {{ 'ok' if last_sync.status == 'success' else 'bad' }}">{{ last_sync.status }}</span>
+        </div>
+        <div class="stat-sub">{{ last_sync.finished_at or "in progress" }}</div>
       {% else %}
-        never
+        <div class="stat-value" style="font-size:1.05rem; color: var(--text-muted);">never</div>
       {% endif %}
-    </li>
-  </ul>
+    </div>
+  </div>
 
   <form action="{{ url_for('sync_now') }}" method="post">
     <button type="submit" {% if not token_configured %}disabled{% endif %}>
       Sync data from Square now
     </button>
   </form>
-  <p class="hint">
+  <p class="hint" style="margin-top: 0.85rem;">
     This pulls locations, service catalog, orders, payments, bookings, and customers
     from Square (read-only) and stores them locally for analysis. It does not create,
     modify, or delete anything in your Square account.
