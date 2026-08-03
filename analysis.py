@@ -203,6 +203,20 @@ def client_retention(dfs):
     sales = _service_sales(dfs)
     orders = dfs["orders"].copy()
     orders["created_at"] = pd.to_datetime(orders["created_at"], errors="coerce", utc=True)
+
+    # An order isn't always tagged with a customer profile at checkout, even when the
+    # payment itself was (e.g. staff picked the customer on the card reader but not in
+    # the order). Fall back to the payment's customer_id so a visit isn't silently
+    # dropped from retention just because the order-level tag is missing.
+    payments = dfs["payments"]
+    if not payments.empty:
+        payment_customers = (
+            payments.dropna(subset=["order_id", "customer_id"])
+            .drop_duplicates(subset=["order_id"])
+            .set_index("order_id")["customer_id"]
+        )
+        orders["customer_id"] = orders["customer_id"].fillna(orders["id"].map(payment_customers))
+
     orders = orders[
         (orders["state"] == "COMPLETED")
         & orders["customer_id"].notna()
