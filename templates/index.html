@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="card">
+  <h2>Connection status</h2>
+  <ul class="status-list">
+    <li>
+      Square access token:
+      {% if token_configured %}
+        <span class="ok">configured</span>
+      {% else %}
+        <span class="bad">not set (edit your .env file)</span>
+      {% endif %}
+    </li>
+    <li>Environment: <span class="badge">{{ environment }}</span></li>
+    <li>
+      Last sync:
+      {% if last_sync %}
+        {{ last_sync.finished_at or "in progress" }} &mdash; status: {{ last_sync.status }}
+      {% else %}
+        never
+      {% endif %}
+    </li>
+  </ul>
+
+  <form action="{{ url_for('sync_now') }}" method="post">
+    <button type="submit" {% if not token_configured %}disabled{% endif %}>
+      Sync data from Square now
+    </button>
+  </form>
+  <p class="hint">
+    This pulls locations, service catalog, orders, payments, bookings, and customers
+    from Square (read-only) and stores them locally for analysis. It does not create,
+    modify, or delete anything in your Square account.
+  </p>
+</section>
+
+<section class="card">
+  <h2>Report</h2>
+  {% if has_data %}
+    <p><a class="button-link" href="{{ url_for('report') }}">View revenue &amp; recommendations report &rarr;</a></p>
+  {% else %}
+    <p class="hint">No data synced yet. Run a sync above first.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>About the data</h2>
+  <p class="hint">
+    Square's public API does not expose cost-of-goods or margin data, so all
+    "profitability" signals in this report are based on <strong>revenue and
+    booking volume</strong> (and, where appointment duration data is available,
+    revenue-per-minute of chair time) as proxies -- not true profit margin.
+  </p>
+</section>
+
+{% endblock %}

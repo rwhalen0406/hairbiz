@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Report — HairBiz Revenue Insights{% endblock %}
+{% block content %}
+
+<section class="card">
+  <h2>Recommendations</h2>
+  <p class="hint">
+    Based on revenue and volume from your Square data (proxy for profitability --
+    Square's API does not expose cost/margin data).
+  </p>
+  {% if recommendations %}
+    {% for rec in recommendations %}
+      <div class="rec-block">
+        <h3>{{ rec.category }}</h3>
+        <p>{{ rec.detail }}</p>
+        {% if rec['items'] %}
+          <ul>
+            {% for item in rec['items'] %}
+              <li>{{ item }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% else %}
+    <p class="hint">Not enough data yet to generate recommendations.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Service performance</h2>
+  {% if not has_duration_data %}
+    <p class="hint">No appointment duration data found (Square Appointments/Bookings), so
+      revenue-per-minute is not available -- only revenue, volume, and trend.</p>
+  {% endif %}
+  <div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Service</th>
+        <th>Total revenue</th>
+        <th>Times sold</th>
+        <th>Avg ticket</th>
+        <th>Trend</th>
+        <th>Revenue/min</th>
+        <th>Signal</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for m in metrics %}
+      <tr>
+        <td>{{ m.service_name }}</td>
+        <td>${{ "%.0f"|format(m.total_revenue) }}</td>
+        <td>{{ m.times_sold }}</td>
+        <td>${{ "%.0f"|format(m.avg_ticket) }}</td>
+        <td><span class="badge trend-{{ m.trend|replace(' ', '-') }}">{{ m.trend }}</span></td>
+        <td>{% if m.revenue_per_minute is not none %}${{ "%.2f"|format(m.revenue_per_minute) }}{% else %}&mdash;{% endif %}</td>
+        <td>
+          {% if m.is_top_performer %}<span class="badge ok">top performer</span>{% endif %}
+          {% if m.is_underperformer %}<span class="badge bad">underperformer</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Frequently booked together</h2>
+  {% if combos %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Service A</th><th>Service B</th><th>Times together</th></tr></thead>
+    <tbody>
+      {% for c in combos %}
+      <tr>
+        <td>{{ c.service_a }}</td>
+        <td>{{ c.service_b }}</td>
+        <td>{{ c.times_together }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+    <p class="hint">No frequent service combinations found in the data yet.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Client retention</h2>
+  <ul class="status-list">
+    <li>Total clients (with completed orders): {{ retention.total_clients }}</li>
+    <li>Repeat clients (2+ visits): {{ retention.repeat_clients }} ({{ "%.0f"|format(retention.repeat_rate * 100) }}%)</li>
+    <li>Average visits per client: {{ retention.avg_visits_per_client }}</li>
+  </ul>
+
+  <h3>Top clients by spend</h3>
+  {% if retention.top_clients %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Client</th><th>Visits</th><th>Total spend</th><th>Last visit</th></tr></thead>
+    <tbody>
+      {% for c in retention.top_clients %}
+      <tr>
+        <td>{{ (c.given_name or "") ~ " " ~ (c.family_name or "") }}</td>
+        <td>{{ c.visits }}</td>
+        <td>${{ "%.0f"|format(c.total_spend) }}</td>
+        <td>{{ c.last_visit }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+    <p class="hint">No client spend data yet.</p>
+  {% endif %}
+
+  <h3>At-risk repeat clients (overdue for rebooking)</h3>
+  {% if retention.at_risk_clients %}
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Client</th><th>Visits</th><th>Total spend</th><th>Days since last visit</th></tr></thead>
+    <tbody>
+      {% for c in retention.at_risk_clients %}
+      <tr>
+        <td>{{ (c.given_name or "") ~ " " ~ (c.family_name or "") }}</td>
+        <td>{{ c.visits }}</td>
+        <td>${{ "%.0f"|format(c.total_spend) }}</td>
+        <td>{{ c.days_since_last_visit }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+    <p class="hint">No at-risk repeat clients identified.</p>
+  {% endif %}
+</section>
+
+{% endblock %}
