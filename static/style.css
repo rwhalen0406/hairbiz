@@ -154,6 +154,12 @@ main { max-width: 980px; margin: 0 auto; }
 .card h3 { font-size: 0.95rem; font-weight: 650; margin: 1.4rem 0 0.15rem; }
 
 .hint { color: var(--text-secondary); font-size: 0.88rem; line-height: 1.5; }
+.hint code {
+  background: var(--status-muted-wash);
+  border-radius: 4px;
+  padding: 0.05rem 0.35rem;
+  font-size: 0.85em;
+}
 .card-subtitle { color: var(--text-secondary); font-size: 0.88rem; margin: -0.6rem 0 1rem; line-height: 1.5; }
 
 /* ---------------------------------------------------------------------

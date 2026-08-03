@@ -13,6 +13,7 @@ from collections import Counter
 import numpy as np
 import pandas as pd
 
+import config
 import db
 
 GROWTH_THRESHOLD = 0.15
@@ -50,6 +51,13 @@ def _service_sales(dfs):
     sales = sales.merge(variations, on="catalog_object_id", how="left")
     # Fall back to the raw line-item name (e.g. custom/ad-hoc items not in catalog).
     sales["service_name"] = sales["catalog_item_name"].fillna(sales["name"])
+
+    if config.EXCLUDED_ITEM_KEYWORDS:
+        lowered = sales["service_name"].str.lower().fillna("")
+        excluded = lowered.apply(
+            lambda n: any(keyword in n for keyword in config.EXCLUDED_ITEM_KEYWORDS)
+        )
+        sales = sales[~excluded]
 
     sales["revenue"] = sales["total_money_cents"].fillna(0) / 100.0
     sales["created_at"] = pd.to_datetime(sales["created_at"], errors="coerce", utc=True)

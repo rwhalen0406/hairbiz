@@ -126,6 +126,7 @@ def report():
         max_revenue=max_revenue,
         top_services_chart=top_services_chart,
         max_combo=max_combo,
+        excluded_keywords=config.EXCLUDED_ITEM_KEYWORDS,
     )
 
 

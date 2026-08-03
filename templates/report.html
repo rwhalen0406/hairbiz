@@ -25,6 +25,13 @@
   </div>
 </div>
 
+{% if excluded_keywords %}
+<p class="hint" style="margin: -0.5rem 0 1rem;">
+  Retail product sales excluded from this analysis (matching: {{ excluded_keywords|join(", ") }}).
+  Adjust via <code>EXCLUDED_ITEM_KEYWORDS</code> in <code>.env</code>.
+</p>
+{% endif %}
+
 <section class="card">
   <h2>Recommendations</h2>
   <p class="card-subtitle">
