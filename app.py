@@ -146,6 +146,17 @@ def client_lookup():
     return render_template("clients.html", query=query, results=results)
 
 
+@app.route("/transactions")
+def transactions():
+    with db.get_connection() as conn:
+        if not db.has_any_data(conn):
+            flash("No data yet. Run a sync first from the home page.", "warning")
+            return redirect(url_for("index"))
+        dfs = analysis.load_dataframes(conn)
+    rows = analysis.recent_transactions(dfs, limit=20)
+    return render_template("transactions.html", rows=rows)
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     # Loopback-only and debug off by default: this app holds a Square access token

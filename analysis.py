@@ -20,6 +20,10 @@ GROWTH_THRESHOLD = 0.15
 DECLINE_THRESHOLD = -0.15
 
 
+def _cents_to_dollars(cents):
+    return 0.0 if pd.isna(cents) else cents / 100.0
+
+
 def load_dataframes(conn):
     frames = {}
     frames["orders"] = pd.read_sql_query("SELECT * FROM orders", conn)
@@ -264,7 +268,7 @@ def client_lookup(dfs, query):
                 "visits": [
                     {
                         "date": row["created_at"].strftime("%Y-%m-%d"),
-                        "total": round((row["total_money_cents"] or 0) / 100.0, 2),
+                        "total": round(_cents_to_dollars(row["total_money_cents"]), 2),
                     }
                     for _, row in cust_orders.iterrows()
                 ],
@@ -324,6 +328,61 @@ def client_retention(dfs):
         "at_risk_clients": at_risk,
         "top_clients": top_clients,
     }
+
+
+def recent_transactions(dfs, limit=20):
+    """Diagnostic: the N most recent orders exactly as synced, with no state
+    filter and no product-keyword exclusion -- a raw view for auditing against
+    Square directly, e.g. to check whether recent activity actually landed in
+    the local cache and what state/payment status it's in.
+    """
+    orders = dfs["orders"].copy()
+    if orders.empty:
+        return []
+
+    orders["created_at"] = pd.to_datetime(orders["created_at"], errors="coerce", utc=True)
+    orders = orders.dropna(subset=["created_at"]).sort_values("created_at", ascending=False).head(limit)
+
+    line_items = dfs["line_items"]
+    payments = dfs["payments"]
+    customers = dfs["customers"].set_index("id") if not dfs["customers"].empty else None
+
+    results = []
+    for _, o in orders.iterrows():
+        items = line_items[line_items["order_id"] == o["id"]] if not line_items.empty else line_items
+        service_names = ", ".join(items["name"].fillna("Unknown item").tolist()) if not items.empty else "(no line items)"
+
+        order_payments = payments[payments["order_id"] == o["id"]] if not payments.empty else payments
+
+        customer_id = o["customer_id"]
+        if pd.isna(customer_id) and order_payments is not None and not order_payments.empty:
+            payment_customer = order_payments["customer_id"].dropna()
+            if not payment_customer.empty:
+                customer_id = payment_customer.iloc[0]
+
+        client_name = "(no customer linked)"
+        if pd.notna(customer_id) and customers is not None and customer_id in customers.index:
+            row = customers.loc[customer_id]
+            name = f"{row.get('given_name') or ''} {row.get('family_name') or ''}".strip()
+            client_name = name or customer_id
+
+        payment_status = "-"
+        if order_payments is not None and not order_payments.empty:
+            statuses = order_payments["status"].dropna().unique().tolist()
+            payment_status = ", ".join(statuses) if statuses else "-"
+
+        results.append(
+            {
+                "order_id": o["id"],
+                "date": o["created_at"].strftime("%Y-%m-%d %H:%M"),
+                "client_name": client_name,
+                "services": service_names,
+                "total": round(_cents_to_dollars(o["total_money_cents"]), 2),
+                "state": o["state"] or "(unknown)",
+                "payment_status": payment_status,
+            }
+        )
+    return results
 
 
 def build_report():
