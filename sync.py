@@ -61,15 +61,19 @@ def run_sync():
             summary["warnings"].append(f"Payments: {exc}")
             summary["counts"]["payments"] = 0
 
-        # Bookings (appointment history) -- not every merchant has this enabled
-        try:
-            booking_count = _sync_bookings(client, location_ids)
-            summary["counts"]["bookings"] = booking_count
-        except SquareAPIError as exc:
-            summary["warnings"].append(
-                f"Bookings/Appointments data unavailable (is Square Appointments enabled on "
-                f"this account?): {exc}"
-            )
+        # Bookings (appointment history) -- optional, off by default for merchants that
+        # don't use Square Appointments (set SYNC_BOOKINGS=true in .env to enable).
+        if config.SYNC_BOOKINGS:
+            try:
+                booking_count = _sync_bookings(client, location_ids)
+                summary["counts"]["bookings"] = booking_count
+            except SquareAPIError as exc:
+                summary["warnings"].append(
+                    f"Bookings/Appointments data unavailable (is Square Appointments enabled on "
+                    f"this account?): {exc}"
+                )
+                summary["counts"]["bookings"] = 0
+        else:
             summary["counts"]["bookings"] = 0
 
         # Customers
