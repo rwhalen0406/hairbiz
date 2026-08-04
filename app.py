@@ -223,6 +223,43 @@ def diagnostics():
     )
 
 
+@app.route("/sales")
+def sales_metrics():
+    try:
+        data = analysis.build_sales_metrics()
+    except Exception as exc:  # surfaced to the UI rather than a raw 500
+        flash(f"Could not build sales metrics: {exc}", "error")
+        return redirect(url_for("index"))
+
+    if not data.get("has_data"):
+        flash("No data yet. Run a sync first from the home page.", "warning")
+        return redirect(url_for("index"))
+
+    monthly_df = data["monthly_sales"]
+    weekday_df = data["sales_by_weekday"]
+    payments_df = data["payment_methods"]
+    avg_ticket_df = data["top_avg_ticket"]
+
+    return render_template(
+        "sales.html",
+        total_revenue=data["total_revenue"],
+        total_sales=data["total_sales"],
+        avg_sale=data["avg_sale"],
+        busiest_month=data["busiest_month"],
+        busiest_weekday=data["busiest_weekday"],
+        monthly_sales=monthly_df.to_dict("records") if not monthly_df.empty else [],
+        max_monthly=float(monthly_df["total_revenue"].max()) if not monthly_df.empty else 0.0,
+        sales_by_weekday=weekday_df.to_dict("records") if not weekday_df.empty else [],
+        max_weekday=float(weekday_df["total_revenue"].max()) if not weekday_df.empty else 0.0,
+        payment_methods=payments_df.to_dict("records") if not payments_df.empty else [],
+        max_payment=float(payments_df["total_amount"].max()) if not payments_df.empty else 0.0,
+        top_avg_ticket=avg_ticket_df.to_dict("records") if not avg_ticket_df.empty else [],
+        max_avg_ticket=float(avg_ticket_df["avg_ticket"].max()) if not avg_ticket_df.empty else 0.0,
+        excluded_keywords=config.EXCLUDED_ITEM_KEYWORDS,
+        excluded_categories=config.EXCLUDED_CATEGORIES,
+    )
+
+
 @app.route("/transactions")
 def transactions():
     with db.get_connection() as conn:

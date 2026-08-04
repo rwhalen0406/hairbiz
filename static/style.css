@@ -18,6 +18,10 @@
   --accent-strong: #184f95;
   --accent-wash: #e8f0fb;
 
+  --series-2: #eb6834;     /* orange */
+  --series-3: #1baf7a;     /* aqua */
+  --series-4: #eda100;     /* yellow */
+
   --status-good: #0ca30c;
   --status-good-wash: #e4f6e4;
   --status-warning: #b8790a;
@@ -46,6 +50,10 @@
     --accent-strong: #86b6ef;
     --accent-wash: rgba(57, 135, 229, 0.14);
 
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+
     --status-good: #0ca30c;
     --status-good-wash: rgba(12, 163, 12, 0.16);
     --status-warning: #fab219;
@@ -70,6 +78,9 @@
   --accent: #3987e5;
   --accent-strong: #86b6ef;
   --accent-wash: rgba(57, 135, 229, 0.14);
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
   --status-good: #0ca30c;
   --status-good-wash: rgba(12, 163, 12, 0.16);
   --status-warning: #fab219;
@@ -277,6 +288,9 @@ button:disabled { background: var(--text-muted); cursor: not-allowed; opacity: 0
   border-radius: 0 4px 4px 0;
   min-width: 2px;
 }
+.bar-fill.series-2 { background: var(--series-2); }
+.bar-fill.series-3 { background: var(--series-3); }
+.bar-fill.series-4 { background: var(--series-4); }
 .bar-row .bar-value {
   font-size: 0.85rem;
   color: var(--text-secondary);
@@ -288,6 +302,54 @@ button:disabled { background: var(--text-muted); cursor: not-allowed; opacity: 0
 .mini-bar-cell { display: flex; align-items: center; gap: 0.5rem; }
 .mini-bar-track { flex: 1; background: var(--gridline); border-radius: 3px; height: 8px; min-width: 60px; }
 .mini-bar-fill { background: var(--accent); height: 100%; border-radius: 0 3px 3px 0; min-width: 2px; }
+
+/* ---------------------------------------------------------------------
+   Column chart (plain HTML/CSS, for time-series / categorical-over-time)
+--------------------------------------------------------------------- */
+.column-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: clamp(0.35rem, 1.5vw, 0.9rem);
+  height: 190px;
+  padding-top: 1.75rem;
+  margin: 0.75rem 0 0.25rem;
+}
+.column-chart .column {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+}
+.column-chart .column-value {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.3rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.column-chart .column-bar {
+  width: 100%;
+  max-width: 26px;
+  background: var(--accent);
+  border-radius: 4px 4px 0 0;
+  min-height: 2px;
+}
+.column-chart .column-bar.is-peak { background: var(--accent-strong); }
+.column-chart .column-label {
+  margin-top: 0.45rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Stat tile accent border, used on the sales dashboard for a bit of color */
+.stat-tile.accent-1 { border-top: 3px solid var(--accent); }
+.stat-tile.accent-2 { border-top: 3px solid var(--series-2); }
+.stat-tile.accent-3 { border-top: 3px solid var(--series-3); }
+.stat-tile.accent-4 { border-top: 3px solid var(--series-4); }
 
 /* ---------------------------------------------------------------------
    Tables
@@ -337,6 +399,15 @@ tbody tr:last-child td { border-bottom: none; }
 
 footer { max-width: 980px; margin: 2rem auto 0; color: var(--text-muted); font-size: 0.82rem; }
 
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+.two-col .card { margin-bottom: 0; }
+
 @media (max-width: 640px) {
   .bar-row { grid-template-columns: 96px 1fr 60px; }
+  .two-col { grid-template-columns: 1fr; }
 }

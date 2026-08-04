@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Sales metrics — HairBiz Revenue Insights{% endblock %}
+{% block content %}
+
+<div class="stat-grid">
+  <div class="stat-tile accent-1">
+    <div class="stat-label">Total revenue</div>
+    <div class="stat-value">${{ "{:,.0f}".format(total_revenue) }}</div>
+    <div class="stat-sub">lookback window</div>
+  </div>
+  <div class="stat-tile accent-2">
+    <div class="stat-label">Total sales</div>
+    <div class="stat-value">{{ "{:,}".format(total_sales) }}</div>
+    <div class="stat-sub">line items sold</div>
+  </div>
+  <div class="stat-tile accent-3">
+    <div class="stat-label">Average sale</div>
+    <div class="stat-value">${{ "%.2f"|format(avg_sale) }}</div>
+    <div class="stat-sub">per line item</div>
+  </div>
+  <div class="stat-tile accent-4">
+    <div class="stat-label">Busiest month</div>
+    <div class="stat-value" style="font-size:1.3rem;">{{ busiest_month or "—" }}</div>
+    <div class="stat-sub">by revenue</div>
+  </div>
+</div>
+
+{% if excluded_keywords or excluded_categories %}
+<p class="hint" style="margin: -0.5rem 0 1rem;">
+  Retail product sales excluded from these metrics
+  {%- if excluded_categories %} (category: {{ excluded_categories|join(", ") }}){% endif %}
+  {%- if excluded_keywords %} (name matches: {{ excluded_keywords|join(", ") }}){% endif %}.
+</p>
+{% endif %}
+
+<section class="card">
+  <h2>Sales by month</h2>
+  <p class="card-subtitle">Revenue per calendar month, last {{ monthly_sales|length }} months.</p>
+  {% if monthly_sales %}
+  <div class="column-chart">
+    {% for m in monthly_sales %}
+    <div class="column">
+      <span class="column-value">${{ "{:,.0f}".format(m.total_revenue) }}</span>
+      <div class="column-bar {{ 'is-peak' if m.label == busiest_month }}"
+           style="height: {{ (m.total_revenue / max_monthly * 100) if max_monthly else 0 }}%;"></div>
+      <span class="column-label">{{ m.label }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+    <p class="hint">Not enough data yet.</p>
+  {% endif %}
+</section>
+
+<div class="two-col">
+  <section class="card">
+    <h2>Sales by day of week</h2>
+    <p class="card-subtitle">Which days bring in the most revenue -- useful for staffing.</p>
+    {% if sales_by_weekday %}
+    <div class="column-chart" style="height: 150px;">
+      {% for d in sales_by_weekday %}
+      <div class="column">
+        <span class="column-value">${{ "{:,.0f}".format(d.total_revenue) }}</span>
+        <div class="column-bar {{ 'is-peak' if d.weekday == busiest_weekday }}"
+             style="height: {{ (d.total_revenue / max_weekday * 100) if max_weekday else 0 }}%;"></div>
+        <span class="column-label">{{ d.label }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+      <p class="hint">Not enough data yet.</p>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Payment methods</h2>
+    <p class="card-subtitle">Total completed payment amount by method.</p>
+    {% if payment_methods %}
+    <div class="bar-chart">
+      {% for p in payment_methods %}
+      <div class="bar-row" style="grid-template-columns: 90px 1fr 70px;">
+        <span class="bar-label" title="{{ p.label }}">{{ p.label }}</span>
+        <div class="bar-track">
+          <div class="bar-fill series-{{ loop.index if loop.index <= 4 else 4 }}"
+               style="width: {{ (p.total_amount / max_payment * 100) if max_payment else 0 }}%;"></div>
+        </div>
+        <span class="bar-value">${{ "{:,.0f}".format(p.total_amount) }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+      <p class="hint">No completed payments found.</p>
+    {% endif %}
+  </section>
+</div>
+
+<section class="card">
+  <h2>Highest average sale by service</h2>
+  <p class="card-subtitle">Which services bring in the most per visit, on average -- candidates to upsell or feature.</p>
+  {% if top_avg_ticket %}
+  <div class="bar-chart">
+    {% for s in top_avg_ticket %}
+    <div class="bar-row">
+      <span class="bar-label" title="{{ s.service_name }}">{{ s.service_name }}</span>
+      <div class="bar-track">
+        <div class="bar-fill" style="width: {{ (s.avg_ticket / max_avg_ticket * 100) if max_avg_ticket else 0 }}%;"></div>
+      </div>
+      <span class="bar-value">${{ "%.0f"|format(s.avg_ticket) }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+    <p class="hint">Not enough data yet.</p>
+  {% endif %}
+</section>
+
+{% endblock %}

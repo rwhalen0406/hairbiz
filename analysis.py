@@ -419,6 +419,96 @@ def recent_transactions(dfs, limit=20):
     return results
 
 
+def monthly_sales(dfs, months=12):
+    """Total revenue per calendar month, most recent `months` first-through-last."""
+    sales = _service_sales(dfs)
+    if sales.empty:
+        return pd.DataFrame(columns=["month", "total_revenue"])
+
+    monthly = sales.set_index("created_at").resample("MS")["revenue"].sum()
+    monthly = monthly.tail(months).reset_index()
+    monthly.columns = ["month", "total_revenue"]
+    monthly["label"] = monthly["month"].dt.strftime("%b %Y")
+    return monthly
+
+
+def sales_by_weekday(dfs):
+    """Total revenue by day of week, Monday first."""
+    sales = _service_sales(dfs)
+    if sales.empty:
+        return pd.DataFrame(columns=["weekday", "total_revenue"])
+
+    sales = sales.copy()
+    sales["weekday"] = sales["created_at"].dt.day_name()
+    order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    grouped = sales.groupby("weekday")["revenue"].sum().reindex(order, fill_value=0.0)
+    result = grouped.reset_index()
+    result.columns = ["weekday", "total_revenue"]
+    result["label"] = result["weekday"].str[:3]
+    return result
+
+
+def payment_method_breakdown(dfs):
+    """Total (completed) payment amount by source type (card, cash, etc.)."""
+    payments = dfs["payments"]
+    if payments.empty:
+        return pd.DataFrame(columns=["method", "total_amount"])
+
+    completed = payments[payments["status"] == "COMPLETED"].copy()
+    if completed.empty:
+        return pd.DataFrame(columns=["method", "total_amount"])
+
+    completed["amount"] = completed["amount_cents"].fillna(0) / 100.0
+    grouped = completed.groupby("source_type")["amount"].sum().sort_values(ascending=False)
+    result = grouped.reset_index()
+    result.columns = ["method", "total_amount"]
+    result["label"] = result["method"].fillna("Unknown").str.replace("_", " ").str.title()
+    return result
+
+
+def build_sales_metrics():
+    with db.get_connection() as conn:
+        if not db.has_any_data(conn):
+            return {"has_data": False}
+        dfs = load_dataframes(conn)
+
+    sales = _service_sales(dfs)
+    if sales.empty:
+        return {"has_data": False}
+
+    total_revenue = sales["revenue"].sum()
+    total_sales = len(sales)
+    avg_sale = total_revenue / total_sales if total_sales else 0.0
+
+    monthly = monthly_sales(dfs)
+    busiest_month = None
+    if not monthly.empty and monthly["total_revenue"].max() > 0:
+        busiest_month = monthly.loc[monthly["total_revenue"].idxmax(), "label"]
+
+    weekday = sales_by_weekday(dfs)
+    busiest_weekday = None
+    if not weekday.empty and weekday["total_revenue"].max() > 0:
+        busiest_weekday = weekday.loc[weekday["total_revenue"].idxmax(), "weekday"]
+
+    metrics, status = service_metrics(dfs)
+    top_avg_ticket = pd.DataFrame()
+    if status == "ok" and not metrics.empty:
+        top_avg_ticket = metrics.sort_values("avg_ticket", ascending=False).head(8)
+
+    return {
+        "has_data": True,
+        "total_revenue": round(total_revenue, 2),
+        "total_sales": total_sales,
+        "avg_sale": round(avg_sale, 2),
+        "busiest_month": busiest_month,
+        "busiest_weekday": busiest_weekday,
+        "monthly_sales": monthly,
+        "sales_by_weekday": weekday,
+        "payment_methods": payment_method_breakdown(dfs),
+        "top_avg_ticket": top_avg_ticket,
+    }
+
+
 def build_report():
     with db.get_connection() as conn:
         if not db.has_any_data(conn):
