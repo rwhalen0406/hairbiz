@@ -129,6 +129,7 @@ def report():
         top_services_chart=top_services_chart,
         max_combo=max_combo,
         excluded_keywords=config.EXCLUDED_ITEM_KEYWORDS,
+        excluded_categories=config.EXCLUDED_CATEGORIES,
     )
 
 

@@ -49,8 +49,18 @@ def load_dataframes(conn):
     frames["booking_segments"] = pd.read_sql_query("SELECT * FROM booking_segments", conn)
     frames["variations"] = pd.read_sql_query("SELECT * FROM catalog_variations", conn)
     frames["items"] = pd.read_sql_query("SELECT * FROM catalog_items", conn)
+    frames["categories"] = pd.read_sql_query("SELECT * FROM catalog_categories", conn)
     frames["customers"] = pd.read_sql_query("SELECT * FROM customers", conn)
     return frames
+
+
+def _excluded_category_ids(dfs):
+    """catalog_categories.id values whose name matches EXCLUDED_CATEGORIES."""
+    categories = dfs["categories"]
+    if categories.empty or not config.EXCLUDED_CATEGORIES:
+        return set()
+    lowered = categories["name"].str.lower().fillna("")
+    return set(categories[lowered.isin(config.EXCLUDED_CATEGORIES)]["id"])
 
 
 def _service_sales(dfs):
@@ -66,12 +76,18 @@ def _service_sales(dfs):
     paid_order_ids = _paid_order_ids(dfs)
     sales = sales[(sales["state"] == "COMPLETED") | (sales["order_id"].isin(paid_order_ids))]
 
-    variations = dfs["variations"][["id", "item_name"]].rename(
+    variations = dfs["variations"][["id", "item_id", "item_name"]].rename(
         columns={"id": "catalog_object_id", "item_name": "catalog_item_name"}
     )
     sales = sales.merge(variations, on="catalog_object_id", how="left")
     # Fall back to the raw line-item name (e.g. custom/ad-hoc items not in catalog).
     sales["service_name"] = sales["catalog_item_name"].fillna(sales["name"])
+
+    excluded_category_ids = _excluded_category_ids(dfs)
+    if excluded_category_ids:
+        items = dfs["items"][["id", "category_id"]].rename(columns={"id": "item_id"})
+        sales = sales.merge(items, on="item_id", how="left")
+        sales = sales[~sales["category_id"].isin(excluded_category_ids)]
 
     if config.EXCLUDED_ITEM_KEYWORDS:
         lowered = sales["service_name"].str.lower().fillna("")

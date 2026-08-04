@@ -27,6 +27,16 @@ EXCLUDED_ITEM_KEYWORDS = [
     if k.strip()
 ]
 
+# Comma-separated, case-insensitive Square Items Library category names. Any sold item
+# in one of these categories is excluded from service performance/trend/bundling
+# analysis -- more reliable than name-keyword matching for a whole category of retail
+# products. Leave blank to disable.
+EXCLUDED_CATEGORIES = [
+    c.strip().lower()
+    for c in os.environ.get("EXCLUDED_CATEGORIES", "Products").split(",")
+    if c.strip()
+]
+
 
 def _get_or_create_secret_key():
     """Uses FLASK_SECRET_KEY if set; otherwise generates and persists a random one
