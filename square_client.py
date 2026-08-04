@@ -181,6 +181,18 @@ class SquareClient:
             if not cursor:
                 break
 
+    def most_recent_orders(self, location_ids, limit=10):
+        """Diagnostic: the single most recent orders, straight from Square --
+        no date window, no state filter, no pagination loop. Bypasses every
+        assumption in search_orders() above, to sanity-check against it."""
+        body = {
+            "location_ids": list(location_ids),
+            "query": {"sort": {"sort_field": "CREATED_AT", "sort_order": "DESC"}},
+            "limit": limit,
+        }
+        data = self._request("POST", "/v2/orders/search", json_body=body)
+        return data.get("orders", [])
+
     # ------------------------------------------------------------------
     # Payments (transaction history)
     # ------------------------------------------------------------------
@@ -202,6 +214,14 @@ class SquareClient:
             cursor = data.get("cursor")
             if not cursor:
                 break
+
+    def most_recent_payments(self, limit=10):
+        """Diagnostic: the single most recent payments, straight from Square --
+        no date window, no pagination loop. Bypasses every assumption in
+        list_payments() above, to sanity-check against it."""
+        params = {"limit": limit, "sort_order": "DESC"}
+        data = self._request("GET", "/v2/payments", params=params)
+        return data.get("payments", [])
 
     # ------------------------------------------------------------------
     # Bookings (appointment history)

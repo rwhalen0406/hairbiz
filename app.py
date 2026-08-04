@@ -7,7 +7,7 @@ import analysis
 import config
 import db
 import recommendations
-from square_client import SquareAPIError, SquareAuthError
+from square_client import SquareAPIError, SquareAuthError, SquareClient
 
 app = Flask(__name__)
 app.secret_key = config.FLASK_SECRET_KEY
@@ -144,6 +144,57 @@ def client_lookup():
             dfs = analysis.load_dataframes(conn)
         results = analysis.client_lookup(dfs, query)
     return render_template("clients.html", query=query, results=results)
+
+
+@app.route("/diagnostics")
+def diagnostics():
+    if not config.SQUARE_ACCESS_TOKEN:
+        flash("No Square access token configured.", "error")
+        return redirect(url_for("index"))
+
+    try:
+        client = SquareClient()
+        with db.get_connection() as conn:
+            location_ids = [row["id"] for row in conn.execute("SELECT id FROM locations").fetchall()]
+        if not location_ids and config.SQUARE_LOCATION_ID:
+            location_ids = [config.SQUARE_LOCATION_ID]
+
+        recent_orders = client.most_recent_orders(location_ids, limit=10) if location_ids else []
+        recent_payments = client.most_recent_payments(limit=10)
+    except SquareAuthError as exc:
+        flash(f"Square rejected the request: {exc}", "error")
+        return redirect(url_for("index"))
+    except SquareAPIError as exc:
+        flash(f"Diagnostics call failed: {exc}", "error")
+        return redirect(url_for("index"))
+
+    orders_view = [
+        {
+            "id": o.get("id"),
+            "created_at": o.get("created_at"),
+            "state": o.get("state"),
+            "total": (o.get("total_money") or {}).get("amount", 0) / 100.0,
+            "location_id": o.get("location_id"),
+        }
+        for o in recent_orders
+    ]
+    payments_view = [
+        {
+            "id": p.get("id"),
+            "created_at": p.get("created_at"),
+            "status": p.get("status"),
+            "amount": (p.get("amount_money") or {}).get("amount", 0) / 100.0,
+            "order_id": p.get("order_id"),
+        }
+        for p in recent_payments
+    ]
+
+    return render_template(
+        "diagnostics.html",
+        orders=orders_view,
+        payments=payments_view,
+        location_ids=location_ids,
+    )
 
 
 @app.route("/transactions")

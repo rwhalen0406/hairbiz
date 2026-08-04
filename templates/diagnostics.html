@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Diagnostics — HairBiz Revenue Insights{% endblock %}
+{% block content %}
+
+<section class="card">
+  <h2>Live diagnostics</h2>
+  <p class="card-subtitle">
+    These calls go straight to Square right now -- no local cache, no date window,
+    no pagination loop, no state filter. If today's activity shows up here but not
+    in Transactions/Report after a fresh sync, the bug is in this app's sync logic.
+    If it's missing here too, Square itself isn't returning it for this token/location,
+    which points to something on the Square/account side (permissions, location, or
+    how that sale was actually recorded).
+  </p>
+  <p class="hint">Location IDs queried: {{ location_ids|join(", ") if location_ids else "(none found)" }}</p>
+</section>
+
+<section class="card">
+  <h2>10 most recent orders (live from Square)</h2>
+  {% if orders %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Date</th><th>Order ID</th><th>State</th><th class="num">Total</th><th>Location</th></tr></thead>
+      <tbody>
+        {% for o in orders %}
+        <tr>
+          <td>{{ o.created_at }}</td>
+          <td><code>{{ o.id }}</code></td>
+          <td>{{ o.state }}</td>
+          <td class="num">${{ "%.2f"|format(o.total) }}</td>
+          <td>{{ o.location_id }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <p class="hint">Square returned no orders at all for this call.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>10 most recent payments (live from Square)</h2>
+  {% if payments %}
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Date</th><th>Payment ID</th><th>Status</th><th class="num">Amount</th><th>Order ID</th></tr></thead>
+      <tbody>
+        {% for p in payments %}
+        <tr>
+          <td>{{ p.created_at }}</td>
+          <td><code>{{ p.id }}</code></td>
+          <td>{{ p.status }}</td>
+          <td class="num">${{ "%.2f"|format(p.amount) }}</td>
+          <td><code>{{ p.order_id }}</code></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <p class="hint">Square returned no payments at all for this call.</p>
+  {% endif %}
+</section>
+
+{% endblock %}

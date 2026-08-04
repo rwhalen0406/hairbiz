@@ -17,6 +17,7 @@
       <a href="{{ url_for('report') }}" class="{{ 'active' if request.endpoint == 'report' }}">Report</a>
       <a href="{{ url_for('client_lookup') }}" class="{{ 'active' if request.endpoint == 'client_lookup' }}">Clients</a>
       <a href="{{ url_for('transactions') }}" class="{{ 'active' if request.endpoint == 'transactions' }}">Transactions</a>
+      <a href="{{ url_for('diagnostics') }}" class="{{ 'active' if request.endpoint == 'diagnostics' }}">Diagnostics</a>
     </nav>
   </header>
 
