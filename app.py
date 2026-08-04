@@ -103,6 +103,13 @@ def report():
     for df in (top_clients_df, at_risk_df):
         if df is not None and not df.empty and "last_visit" in df.columns:
             df["last_visit"] = df["last_visit"].dt.strftime("%Y-%m-%d")
+        if df is not None and not df.empty and "avg_days_between_visits" in df.columns:
+            df["avg_months_between_visits"] = (df["avg_days_between_visits"] / 30.44).round(1)
+
+    if top_clients_df is not None and not top_clients_df.empty:
+        top_clients_df = top_clients_df.astype(object).where(pd.notnull(top_clients_df), None)
+    if at_risk_df is not None and not at_risk_df.empty:
+        at_risk_df = at_risk_df.astype(object).where(pd.notnull(at_risk_df), None)
 
     retention_view = {
         "total_clients": retention.get("total_clients", 0),
