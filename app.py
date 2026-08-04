@@ -161,6 +161,21 @@ def diagnostics():
 
         recent_orders = client.most_recent_orders(location_ids, limit=10) if location_ids else []
         recent_payments = client.most_recent_payments(limit=10)
+
+        # Also run the actual filtered + paginated search sync.py uses, to compare
+        # its most-recent result against the raw unfiltered one above -- isolates
+        # whether the gap is in the filter, the pagination loop, or neither.
+        import sync as sync_module
+
+        begin_time = sync_module._lookback_start_iso()
+        filtered_count = 0
+        filtered_most_recent = None
+        if location_ids:
+            for order in client.search_orders(location_ids, begin_time=begin_time):
+                filtered_count += 1
+                created = order.get("created_at")
+                if created and (filtered_most_recent is None or created > filtered_most_recent):
+                    filtered_most_recent = created
     except SquareAuthError as exc:
         flash(f"Square rejected the request: {exc}", "error")
         return redirect(url_for("index"))
@@ -194,6 +209,9 @@ def diagnostics():
         orders=orders_view,
         payments=payments_view,
         location_ids=location_ids,
+        filtered_count=filtered_count,
+        filtered_most_recent=filtered_most_recent,
+        live_most_recent=orders_view[0]["created_at"] if orders_view else None,
     )
 
 

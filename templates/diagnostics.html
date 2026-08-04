@@ -16,6 +16,40 @@
 </section>
 
 <section class="card">
+  <h2>Filtered/paginated search vs. raw live check</h2>
+  <p class="card-subtitle">
+    This runs the exact same filtered, paginated search that a real sync uses
+    (same date window, same state filter, same cursor pagination) and compares
+    its most-recent result against the raw unfiltered check below. If these two
+    dates don't match, that's the gap -- and how big it is.
+  </p>
+  <div class="stat-grid">
+    <div class="stat-tile">
+      <div class="stat-label">Filtered/paginated search found</div>
+      <div class="stat-value">{{ filtered_count }} orders</div>
+      <div class="stat-sub">most recent: {{ filtered_most_recent or "none" }}</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-label">Raw live check (no filter)</div>
+      <div class="stat-value">most recent order</div>
+      <div class="stat-sub">{{ live_most_recent or "none" }}</div>
+    </div>
+  </div>
+  {% if filtered_most_recent and live_most_recent and filtered_most_recent < live_most_recent %}
+    <p class="hint" style="color: var(--status-critical);">
+      &#9888; Confirmed gap: the filtered/paginated search's most recent result
+      ({{ filtered_most_recent }}) is older than what's actually available
+      ({{ live_most_recent }}). The bug is in the filter or pagination logic.
+    </p>
+  {% elif filtered_most_recent and live_most_recent %}
+    <p class="hint" style="color: var(--status-good);">
+      &#10003; These match -- the filtered/paginated search is finding the same
+      most-recent order as the raw check.
+    </p>
+  {% endif %}
+</section>
+
+<section class="card">
   <h2>10 most recent orders (live from Square)</h2>
   {% if orders %}
   <div class="table-wrap">
