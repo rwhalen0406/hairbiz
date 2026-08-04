@@ -13,7 +13,7 @@ SQUARE_ACCESS_TOKEN = os.environ.get("SQUARE_ACCESS_TOKEN", "")
 SQUARE_ENVIRONMENT = os.environ.get("SQUARE_ENVIRONMENT", "sandbox").strip().lower()
 SQUARE_VERSION = os.environ.get("SQUARE_VERSION", "2024-01-18")
 SQUARE_LOCATION_ID = os.environ.get("SQUARE_LOCATION_ID", "").strip()
-SYNC_LOOKBACK_DAYS = int(os.environ.get("SYNC_LOOKBACK_DAYS", "730"))
+SYNC_LOOKBACK_DAYS = int(os.environ.get("SYNC_LOOKBACK_DAYS", "365"))
 SYNC_BOOKINGS = os.environ.get("SYNC_BOOKINGS", "true").strip().lower() in ("1", "true", "yes")
 
 # Comma-separated, case-insensitive substrings. Any sold line item whose name contains

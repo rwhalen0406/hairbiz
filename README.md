@@ -87,7 +87,7 @@ auth/token problem and surfaced clearly in the UI rather than retried.
 
 ## Data window
 
-By default each sync pulls the last `SYNC_LOOKBACK_DAYS` (730 / ~2 years) of
+By default each sync pulls the last `SYNC_LOOKBACK_DAYS` (365 / 1 year) of
 orders, payments, and bookings, so trend analysis has enough history.
 Adjust this in `.env`.
 
