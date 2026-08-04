@@ -24,6 +24,22 @@ def _cents_to_dollars(cents):
     return 0.0 if pd.isna(cents) else cents / 100.0
 
 
+def _paid_order_ids(dfs):
+    """order_ids with at least one COMPLETED payment.
+
+    An order's own `state` field doesn't always reach COMPLETED even after a
+    payment succeeds (checkout-flow dependent), so revenue/visit analysis treats
+    an order as a real sale if EITHER its state is COMPLETED OR it has a
+    completed payment -- payment status is the authoritative record of money
+    actually received.
+    """
+    payments = dfs["payments"]
+    if payments.empty:
+        return set()
+    completed = payments[payments["status"] == "COMPLETED"]
+    return set(completed["order_id"].dropna().unique())
+
+
 def load_dataframes(conn):
     frames = {}
     frames["orders"] = pd.read_sql_query("SELECT * FROM orders", conn)
@@ -47,7 +63,8 @@ def _service_sales(dfs):
         columns={"id": "order_id"}
     )
     sales = li.merge(orders, on="order_id", how="left")
-    sales = sales[sales["state"] == "COMPLETED"]
+    paid_order_ids = _paid_order_ids(dfs)
+    sales = sales[(sales["state"] == "COMPLETED") | (sales["order_id"].isin(paid_order_ids))]
 
     variations = dfs["variations"][["id", "item_name"]].rename(
         columns={"id": "catalog_object_id", "item_name": "catalog_item_name"}
@@ -231,8 +248,9 @@ def _resolved_orders(dfs):
         )
         orders["customer_id"] = orders["customer_id"].fillna(orders["id"].map(payment_customers))
 
+    paid_order_ids = _paid_order_ids(dfs)
     return orders[
-        (orders["state"] == "COMPLETED")
+        ((orders["state"] == "COMPLETED") | (orders["id"].isin(paid_order_ids)))
         & orders["customer_id"].notna()
         & orders["created_at"].notna()
     ]

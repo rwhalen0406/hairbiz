@@ -140,8 +140,16 @@ class SquareClient:
     # ------------------------------------------------------------------
     # Orders (line-item level revenue)
     # ------------------------------------------------------------------
-    def search_orders(self, location_ids, begin_time=None, end_time=None, states=("COMPLETED",)):
-        """Yields orders for the given locations, handling pagination."""
+    def search_orders(self, location_ids, begin_time=None, end_time=None, states=("OPEN", "COMPLETED", "CANCELED")):
+        """Yields orders for the given locations, handling pagination.
+
+        Defaults to every Order state (not just COMPLETED): some checkout flows
+        leave an order's state lagging behind or never advancing to COMPLETED
+        even after payment succeeds, and filtering server-side to COMPLETED-only
+        would silently drop those orders before they ever reach the local cache.
+        Which orders count as a "real" sale is decided downstream from payment
+        status instead of order state -- see analysis.py.
+        """
         cursor = None
         date_filter = {}
         if begin_time or end_time:
